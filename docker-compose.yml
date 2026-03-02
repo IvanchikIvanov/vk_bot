@@ -1,0 +1,15 @@
+# Explanation: локальный запуск с volume для БД
+services:
+  vk-bot:
+    build: .
+    ports:
+      - "5000:5000"
+    env_file: .env
+    environment:
+      - DB_PATH=/app/data/subscriptions.db
+    volumes:
+      - bot-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  bot-data:

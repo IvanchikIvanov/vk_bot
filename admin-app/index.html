@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Админка бота</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 16px; background: #f5f5f5; font-size: 14px; }
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h1 { margin: 0 0 16px; font-size: 20px; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .stat { text-align: center; padding: 12px; background: #f0f0f0; border-radius: 8px; }
+    .stat-num { font-size: 24px; font-weight: bold; color: #07c; }
+    .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 10px 16px; background: #fff; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; }
+    .tab.active { background: #07c; color: #fff; border-color: #07c; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f8f8f8; font-weight: 600; }
+    .form-row { margin-bottom: 12px; }
+    .form-row label { display: block; margin-bottom: 4px; font-weight: 500; }
+    input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
+    button { padding: 10px 20px; background: #07c; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.danger { background: #c00; }
+    .error { color: #c00; padding: 8px; margin-top: 8px; }
+    .success { color: #070; padding: 8px; margin-top: 8px; }
+    .loading { opacity: 0.6; pointer-events: none; }
+    .empty { color: #999; padding: 16px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Админка бота</h1>
+    <p id="userInfo" style="color:#666;font-size:12px;"></p>
+  </div>
+
+  <div class="card" id="statsCard">
+    <h2>Статистика</h2>
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="statPayments">—</div><div class="stat-label">Оплат</div></div>
+      <div class="stat"><div class="stat-num" id="statAmount">—</div><div class="stat-label">Сумма ₽</div></div>
+      <div class="stat"><div class="stat-num" id="statActive">—</div><div class="stat-label">Активных</div></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <span class="tab active" data-tab="payments">Оплаты</span>
+    <span class="tab" data-tab="users">Пользователи</span>
+    <span class="tab" data-tab="actions">Действия</span>
+  </div>
+
+  <div class="card" id="paymentsCard">
+    <h2>Оплаты</h2>
+    <div id="paymentsList" class="empty">Загрузка...</div>
+  </div>
+
+  <div class="card" id="usersCard" style="display:none">
+    <h2>Подписки</h2>
+    <div id="usersList" class="empty">Загрузка...</div>
+  </div>
+
+  <div class="card" id="actionsCard" style="display:none">
+    <h2>Ручная выдача</h2>
+    <div class="form-row">
+      <label>VK user_id</label>
+      <input type="number" id="inviteUserId" placeholder="123456789">
+    </div>
+    <div class="form-row">
+      <label>Дней</label>
+      <input type="number" id="inviteDays" value="30">
+    </div>
+    <button id="btnInvite">Выдать доступ</button>
+    <div id="inviteResult"></div>
+
+    <h2 style="margin-top:24px">Блокировка</h2>
+    <div class="form-row">
+      <label>VK user_id</label>
+      <input type="number" id="blockUserId" placeholder="123456789">
+    </div>
+    <button id="btnBlock" class="danger">Заблокировать</button>
+    <div id="blockResult"></div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin + '/admin/api';
+    let launchParams = {};
+
+    function getLaunchParams() {
+      const params = new URLSearchParams(window.location.search);
+      const result = {};
+      for (const [k, v] of params) {
+        if (k.startsWith('vk_') || k === 'sign' || k === 'secret') result[k] = v;
+      }
+      return result;
+    }
+
+    function getAuthHeaders() {
+      const params = getLaunchParams();
+      const headers = { 'Content-Type': 'application/json' };
+      if (params.vk_user_id) headers['X-VK-User-Id'] = params.vk_user_id;
+      if (params.sign) headers['X-VK-Sign'] = params.sign;
+      for (const k in params) if (params[k]) headers['X-VK-Param-' + k] = params[k];
+      return headers;
+    }
+
+    function authQuery() {
+      const params = getLaunchParams();
+      return new URLSearchParams(params).toString();
+    }
+
+    async function api(path, options = {}) {
+      const url = API_BASE + path + (path.includes('?') ? '&' : '?') + authQuery();
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...getAuthHeaders(), ...(options.headers || {}) }
+      });
+      const data = res.ok ? await res.json().catch(() => ({})) : { error: 'Ошибка ' + res.status };
+      if (!res.ok) throw new Error(data.error || data.message || 'Ошибка запроса');
+      return data;
+    }
+
+    async function loadStats() {
+      try {
+        const s = await api('/stats');
+        document.getElementById('statPayments').textContent = s.payments_count ?? '—';
+        document.getElementById('statAmount').textContent = s.total_amount ?? '—';
+        document.getElementById('statActive').textContent = s.active_subscriptions ?? '—';
+      } catch (e) {
+        document.getElementById('statsCard').innerHTML += '<div class="error">' + e.message + '</div>';
+      }
+    }
+
+    async function loadPayments() {
+      const el = document.getElementById('paymentsList');
+      try {
+        const rows = await api('/payments');
+        if (!rows.length) { el.textContent = 'Нет оплат'; el.className = 'empty'; return; }
+        el.innerHTML = '<table><tr><th>ID</th><th>user_id</th><th>Сумма</th><th>Дата</th></tr>' +
+          rows.map(r => `<tr><td>${(r.payment_id||'').slice(0,20)}</td><td>${r.user_id}</td><td>${r.amount}</td><td>${(r.created_at||'').slice(0,10)}</td></tr>`).join('') + '</table>';
+        el.className = '';
+      } catch (e) {
+        el.textContent = e.message;
+        el.className = 'error';
+      }
+    }
+
+    async function loadUsers() {
+      const el = document.getElementById('usersList');
+      try {
+        const rows = await api('/users');
+        if (!rows.length) { el.textContent = 'Нет подписок'; el.className = 'empty'; return; }
+        el.innerHTML = '<table><tr><th>user_id</th><th>Окончание</th><th>Тариф</th><th>Статус</th></tr>' +
+          rows.map(r => `<tr><td>${r.user_id}</td><td>${(r.subscription_end||'').slice(0,10)}</td><td>${r.tier_label||'—'}</td><td>${r.status||'—'}</td></tr>`).join('') + '</table>';
+        el.className = '';
+      } catch (e) {
+        el.textContent = e.message;
+        el.className = 'error';
+      }
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('paymentsCard').style.display = tab.dataset.tab === 'payments' ? 'block' : 'none';
+        document.getElementById('usersCard').style.display = tab.dataset.tab === 'users' ? 'block' : 'none';
+        document.getElementById('actionsCard').style.display = tab.dataset.tab === 'actions' ? 'block' : 'none';
+        if (tab.dataset.tab === 'users') loadUsers();
+      };
+    });
+
+    document.getElementById('btnInvite').onclick = async () => {
+      const uid = document.getElementById('inviteUserId').value;
+      const days = document.getElementById('inviteDays').value;
+      const res = document.getElementById('inviteResult');
+      if (!uid) { res.innerHTML = '<span class="error">Введите user_id</span>'; return; }
+      res.innerHTML = '';
+      document.getElementById('btnInvite').disabled = true;
+      try {
+        await api('/manual-invite', { method: 'POST', body: JSON.stringify({ user_id: parseInt(uid), days: parseInt(days) || 30 }) });
+        res.innerHTML = '<span class="success">Доступ выдан</span>';
+        loadStats(); loadUsers();
+      } catch (e) {
+        res.innerHTML = '<span class="error">' + e.message + '</span>';
+      }
+      document.getElementById('btnInvite').disabled = false;
+    };
+
+    document.getElementById('btnBlock').onclick = async () => {
+      const uid = document.getElementById('blockUserId').value;
+      const res = document.getElementById('blockResult');
+      if (!uid) { res.innerHTML = '<span class="error">Введите user_id</span>'; return; }
+      res.innerHTML = '';
+      document.getElementById('btnBlock').disabled = true;
+      try {
+        await api('/manual-block', { method: 'POST', body: JSON.stringify({ user_id: parseInt(uid) }) });
+        res.innerHTML = '<span class="success">Заблокирован</span>';
+        loadStats(); loadUsers();
+      } catch (e) {
+        res.innerHTML = '<span class="error">' + e.message + '</span>';
+      }
+      document.getElementById('btnBlock').disabled = false;
+    };
+
+    const params = getLaunchParams();
+    document.getElementById('userInfo').textContent = params.vk_user_id ? 'VK ID: ' + params.vk_user_id : 'Откройте из VK для доступа';
+
+    loadStats();
+    loadPayments();
+  </script>
+</body>
+</html>

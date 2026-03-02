@@ -1,0 +1,14 @@
+# Explanation: исключаем из контекста сборки
+.env
+.env.*
+!.env.example
+*.db
+__pycache__
+*.pyc
+.venv
+venv
+.git
+.gitignore
+.github
+*.md
+.DS_Store

@@ -1,0 +1,5 @@
+vk_api>=11.9.0
+yookassa>=3.0.0
+flask>=3.0.0
+python-dotenv>=1.0.0
+apscheduler>=3.10.0

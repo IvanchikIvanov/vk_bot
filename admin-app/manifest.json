@@ -1,0 +1,9 @@
+{
+  "name": "Админка бота",
+  "short_name": "Админка",
+  "description": "Управление подписками и пользователями",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "scope": "/admin-app/",
+  "start_url": "/admin-app/"
+}
