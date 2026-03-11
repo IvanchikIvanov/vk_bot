@@ -94,7 +94,7 @@ def _find_menu_by_text(text: str) -> dict | None:
 
 def _format_product_card() -> str:
     p = config.PRODUCT_INFO
-    min_price = min(t["price"] for t in config.SUBSCRIPTION_TIERS)
+    min_price = min(config.SUBSCRIPTION_TIERS, key=lambda t: float(t["price"]))["price"]
     return f"""📚 {p['name']}
 
 {p['description']}

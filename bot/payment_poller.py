@@ -74,8 +74,6 @@ def poll_pending_payments() -> None:
 
     pending_list = get_pending_payments()
     cutoff = datetime.utcnow() - timedelta(hours=POLL_TIMEOUT_HOURS)
-    if pending_list:
-        logger.info("Poll: checking %d pending payments", len(pending_list))
 
     for p in pending_list:
         payment_id = p["payment_id"]
@@ -95,7 +93,6 @@ def poll_pending_payments() -> None:
             continue
 
         status = data.get("status")
-        logger.info("Poll: payment_id=%s user_id=%s status=%s", payment_id, p.get("user_id"), status)
 
         if status == "succeeded":
             _process_succeeded(p)
