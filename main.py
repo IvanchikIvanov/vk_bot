@@ -10,6 +10,8 @@ from scheduler import start_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+# Убрать шум APScheduler: Running job / executed successfully каждые 5 сек
+logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
 
 
 def main():
