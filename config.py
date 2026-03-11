@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 VK_TOKEN = os.getenv("VK_TOKEN", "")
+VK_USER_TOKEN = os.getenv("VK_USER_TOKEN", "")  # для groups.invite, groups.removeUser
 VK_GROUP_ID = int(os.getenv("VK_GROUP_ID", "0"))
 YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "")
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "")
