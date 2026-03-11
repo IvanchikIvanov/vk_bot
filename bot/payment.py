@@ -46,7 +46,10 @@ def create_payment(user_id: int, price: str, days: int, tier_label: str = "") ->
             url = conf.confirmation_url
         else:
             return None
-        return (payment_id, url) if url else None
+        if url:
+            logger.info("create_payment ok: payment_id=%s user_id=%s price=%s", payment_id, user_id, price)
+            return (payment_id, url)
+        return None
     except Exception as e:
         logger.exception("create_payment failed: user_id=%s price=%s error=%s", user_id, price, e)
         return None

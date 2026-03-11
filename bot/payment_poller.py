@@ -46,9 +46,11 @@ def _process_succeeded(pending: dict) -> None:
     tier_label = pending.get("tier_label") or ""
 
     if payment_exists(payment_id):
+        logger.info("Poll: payment_id=%s already processed, skipping", payment_id)
         remove_pending_payment(payment_id)
         return
 
+    logger.info("Poll: processing succeeded user_id=%s payment_id=%s amount=%s days=%s", user_id, payment_id, amount, days)
     ok = invite_to_group(user_id)
     if not ok:
         logger.warning("Poll: invite failed for user_id=%s payment_id=%s", user_id, payment_id)
@@ -59,9 +61,10 @@ def _process_succeeded(pending: dict) -> None:
     end_str = end_date.strftime("%d.%m.%Y")
     msg = config.INVITE_SUCCESS_MESSAGE.format(end_date=end_str)
     send_vk_message(user_id, msg)
+    logger.info("Poll: success message sent user_id=%s end_date=%s", user_id, end_str)
 
     remove_pending_payment(payment_id)
-    logger.info("Poll: payment succeeded user_id=%s payment_id=%s", user_id, payment_id)
+    logger.info("Poll: payment completed user_id=%s payment_id=%s", user_id, payment_id)
 
 
 def poll_pending_payments() -> None:
@@ -71,6 +74,8 @@ def poll_pending_payments() -> None:
 
     pending_list = get_pending_payments()
     cutoff = datetime.utcnow() - timedelta(hours=POLL_TIMEOUT_HOURS)
+    if pending_list:
+        logger.info("Poll: checking %d pending payments", len(pending_list))
 
     for p in pending_list:
         payment_id = p["payment_id"]
@@ -90,6 +95,7 @@ def poll_pending_payments() -> None:
             continue
 
         status = data.get("status")
+        logger.info("Poll: payment_id=%s user_id=%s status=%s", payment_id, p.get("user_id"), status)
 
         if status == "succeeded":
             _process_succeeded(p)

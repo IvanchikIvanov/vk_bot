@@ -145,6 +145,7 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
 
     # Навигация: главное меню
     if text == BACK_LABEL:
+        logger.info("Action: back_to_menu user_id=%s", user_id)
         _send(vk, peer_id, config.WELCOME_MESSAGE, keyboard=_get_main_keyboard())
         return
 
@@ -152,6 +153,7 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
     menu = _find_menu_by_text(text)
     if menu:
         mid = menu.get("id", "")
+        logger.info("Action: menu user_id=%s menu_id=%s", user_id, mid)
         if mid == "courses":
             _send(vk, peer_id, _format_product_card(), keyboard=_get_select_tier_keyboard())
         elif mid == "tariffs":
@@ -177,6 +179,7 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
 
     # Отправить приглашение повторно (только при активной подписке)
     if text == RESEND_INVITE_LABEL:
+        logger.info("Action: resend_invite user_id=%s", user_id)
         if is_subscribed(user_id):
             if invite_to_group(user_id):
                 _send(vk, peer_id, "Приглашение отправлено. Проверьте уведомления ВК (🔔).", keyboard=_get_my_access_keyboard(True))
@@ -188,13 +191,16 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
 
     # Выбрать тариф / Продлить -> показать тарифы
     if text == SELECT_TIER_LABEL or text == RENEW_LABEL:
+        logger.info("Action: show_tiers user_id=%s", user_id)
         _send(vk, peer_id, _format_tiers_list(), keyboard=_get_tiers_keyboard())
         return
 
     # Выбор тарифа -> оплата
     tier = _find_tier_by_text(text)
     if tier:
+        logger.info("Action: tier_selected user_id=%s tier=%s price=%s days=%s", user_id, tier["label"], tier["price"], tier["days"])
         if is_subscribed(user_id):
+            logger.info("Action: blocked_already_subscribed user_id=%s", user_id)
             _send(vk, peer_id, "У вас уже есть активная подписка.", keyboard=_get_main_keyboard())
             return
 
@@ -216,13 +222,14 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
         if result:
             payment_id, url = result
             add_pending_payment(payment_id, user_id, tier["price"], tier["days"], tier.get("label", ""))
+            logger.info("Payment: created payment_id=%s user_id=%s tier=%s", payment_id, user_id, tier["label"])
             _send(
                 vk,
                 peer_id,
                 f"Оплатите подписку по ссылке:\n{url}\n\nТариф: {tier['label']}",
                 keyboard={"one_time": False, "buttons": [[_btn(BACK_LABEL)]]},
             )
-            logger.info("Sent: payment link %s (user_id=%s)", tier["label"], user_id)
+            logger.info("Payment: link sent user_id=%s payment_id=%s tier=%s", user_id, payment_id, tier["label"])
         else:
             _send(vk, peer_id, "Ошибка создания платежа. Попробуйте позже.", keyboard=_get_main_keyboard())
             logger.error("Payment creation failed for user_id=%s", user_id)
@@ -258,7 +265,8 @@ def run_longpoll():
 
         for event in events:
             last_heartbeat = time.time()
-            logger.info("Event: type=%s raw=%s", getattr(event, "type", None), getattr(event, "raw", event))
+            ev_type = getattr(event, "type", None)
+            logger.info("Event: type=%s", ev_type)
 
             if event.type != VkBotEventType.MESSAGE_NEW:
                 logger.info("Skip: not message_new (type=%s)", event.type)
@@ -266,7 +274,8 @@ def run_longpoll():
 
             user_id = _get_user_id(event)
             peer_id = _get_peer_id(event)
-            logger.info("message_new: user_id=%s peer_id=%s", user_id, peer_id)
+            msg_text = (event.object.get("message", event.object) or {}).get("text", "")[:100]
+            logger.info("message_new: user_id=%s peer_id=%s text=%r", user_id, peer_id, msg_text)
 
             if not user_id or user_id < 0:
                 logger.warning("Skip: invalid user_id=%s", user_id)

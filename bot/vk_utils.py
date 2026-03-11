@@ -40,6 +40,7 @@ def send_vk_message(user_id: int, text: str) -> bool:
     try:
         vk = _get_vk()
         vk.method("messages.send", {"peer_id": user_id, "message": text, "random_id": 0})
+        logger.info("messages.send ok: user_id=%s len=%d", user_id, len(text))
         return True
     except Exception as e:
         logger.warning("Failed to send VK message to user_id=%s: %s", user_id, e)

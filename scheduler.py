@@ -37,6 +37,7 @@ def check_expired_subscriptions():
 def start_scheduler() -> BackgroundScheduler:
     sched = BackgroundScheduler()
     sched.add_job(poll_pending_payments, "interval", seconds=config.PAYMENT_POLL_INTERVAL)
+    logger.info("Scheduler: poll_pending_payments every %s sec", config.PAYMENT_POLL_INTERVAL)
     sched.add_job(check_expired_subscriptions, "cron", hour=3, minute=0)
     sched.add_job(lambda: send_reminders(3), "cron", hour=9, minute=0)
     sched.add_job(lambda: send_reminders(1), "cron", hour=9, minute=0)
