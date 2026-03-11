@@ -49,48 +49,7 @@ def _send_vk_message(user_id: int, text: str) -> bool:
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    if not _verify_webhook_signature():
-        return "", 403
-    data = request.get_json(silent=True)
-    if not data:
-        return "", 400
-
-    event = data.get("event")
-    if event != "payment.succeeded":
-        return "", 200
-
-    obj = data.get("object", {})
-    payment_id = obj.get("id")
-    metadata = obj.get("metadata", {})
-    user_id_str = metadata.get("user_id")
-    amount = obj.get("amount", {})
-    amount_value = amount.get("value", "0") if isinstance(amount, dict) else "0"
-
-    if not payment_id or not user_id_str:
-        return "", 400
-
-    try:
-        user_id = int(user_id_str)
-    except ValueError:
-        return "", 400
-
-    if payment_exists(payment_id):
-        return "", 200
-
-    days = int(metadata.get("days", config.SUBSCRIPTION_DAYS))
-    tier_label = metadata.get("tier_label", "")
-
-    ok = _invite_to_group(user_id)
-    if not ok:
-        logger.warning("Webhook: invite failed for user_id=%s payment_id=%s", user_id, payment_id)
-    add_payment(payment_id, user_id, amount_value)
-    end_date = datetime.utcnow() + timedelta(days=days)
-    upsert_subscription(user_id, end_date, tier_label or None)
-
-    end_str = end_date.strftime("%d.%m.%Y")
-    msg = config.INVITE_SUCCESS_MESSAGE.format(end_date=end_str)
-    _send_vk_message(user_id, msg)
-
+    """Webhook отключён — оплата проверяется через polling (payment_poller). Возвращаем 200 для совместимости."""
     return "", 200
 
 

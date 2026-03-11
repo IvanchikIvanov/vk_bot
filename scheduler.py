@@ -1,10 +1,11 @@
-"""APScheduler: напоминания 3/1/0 дней, блокировка при истечении + ЛС"""
+"""APScheduler: напоминания 3/1/0 дней, блокировка при истечении + ЛС, polling оплат"""
 import logging
 
 import config
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from bot.db import get_expired_user_ids, get_users_expiring_in_days, remove_subscription
+from bot.payment_poller import poll_pending_payments
 from bot.vk_utils import remove_from_group, send_vk_message
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ def check_expired_subscriptions():
 
 def start_scheduler() -> BackgroundScheduler:
     sched = BackgroundScheduler()
+    sched.add_job(poll_pending_payments, "interval", seconds=config.PAYMENT_POLL_INTERVAL)
     sched.add_job(check_expired_subscriptions, "cron", hour=3, minute=0)
     sched.add_job(lambda: send_reminders(3), "cron", hour=9, minute=0)
     sched.add_job(lambda: send_reminders(1), "cron", hour=9, minute=0)

@@ -51,6 +51,16 @@ def init_db():
                 created_at TEXT NOT NULL
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS pending_payments (
+                payment_id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                amount TEXT NOT NULL,
+                days INTEGER NOT NULL,
+                tier_label TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
         _migrate_add_tier_label(conn)
 
 
@@ -70,6 +80,30 @@ def add_payment(payment_id: str, user_id: int, amount: str) -> None:
             "INSERT INTO payments (payment_id, user_id, amount, created_at) VALUES (?, ?, ?, ?)",
             (payment_id, user_id, amount, datetime.utcnow().isoformat()),
         )
+
+
+def add_pending_payment(
+    payment_id: str, user_id: int, amount: str, days: int, tier_label: str = ""
+) -> None:
+    with _conn() as conn:
+        conn.execute(
+            "INSERT INTO pending_payments (payment_id, user_id, amount, days, tier_label, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (payment_id, user_id, amount, days, tier_label or "", datetime.utcnow().isoformat()),
+        )
+
+
+def get_pending_payments(limit: int = 100) -> list[dict]:
+    with _conn() as conn:
+        cur = conn.execute(
+            "SELECT payment_id, user_id, amount, days, tier_label, created_at FROM pending_payments ORDER BY created_at ASC LIMIT ?",
+            (limit,),
+        )
+        return [dict(r) for r in cur.fetchall()]
+
+
+def remove_pending_payment(payment_id: str) -> None:
+    with _conn() as conn:
+        conn.execute("DELETE FROM pending_payments WHERE payment_id = ?", (payment_id,))
 
 
 def upsert_subscription(

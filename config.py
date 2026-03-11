@@ -106,3 +106,5 @@ REMINDER_0_DAYS = "Ваш доступ заканчивается сегодня
 TEST_MODE = os.getenv("TEST_MODE", "").lower() in ("1", "true", "yes")
 WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "5000"))
 DB_PATH = os.getenv("DB_PATH", "subscriptions.db")
+# Интервал проверки pending платежей (секунды)
+PAYMENT_POLL_INTERVAL = int(os.getenv("PAYMENT_POLL_INTERVAL", "5"))

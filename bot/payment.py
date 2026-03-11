@@ -1,7 +1,7 @@
 """ЮKassa: создание платежа с metadata.user_id"""
 import logging
 import uuid
-from typing import Optional
+from typing import Optional, Tuple
 
 import config
 from yookassa import Configuration, Payment
@@ -14,10 +14,10 @@ def _ensure_configured() -> None:
         Configuration.configure(config.YOOKASSA_SHOP_ID, config.YOOKASSA_SECRET_KEY)
 
 
-def create_payment(user_id: int, price: str, days: int, tier_label: str = "") -> Optional[str]:
+def create_payment(user_id: int, price: str, days: int, tier_label: str = "") -> Optional[Tuple[str, str]]:
     """
     Создаёт платёж в ЮKassa.
-    Returns: confirmation_url или None при ошибке
+    Returns: (payment_id, confirmation_url) или None при ошибке
     """
     _ensure_configured()
     idempotence_key = f"vk_{user_id}_{uuid.uuid4().hex[:16]}"
@@ -36,12 +36,17 @@ def create_payment(user_id: int, price: str, days: int, tier_label: str = "") ->
             },
             idempotence_key,
         )
+        payment_id = getattr(payment, "id", None) or (payment.get("id") if isinstance(payment, dict) else None)
+        if not payment_id:
+            return None
         conf = getattr(payment, "confirmation", None)
         if isinstance(conf, dict):
-            return conf.get("confirmation_url")
-        if conf and hasattr(conf, "confirmation_url"):
-            return conf.confirmation_url
-        return None
+            url = conf.get("confirmation_url")
+        elif conf and hasattr(conf, "confirmation_url"):
+            url = conf.confirmation_url
+        else:
+            return None
+        return (payment_id, url) if url else None
     except Exception as e:
         logger.exception("create_payment failed: user_id=%s price=%s error=%s", user_id, price, e)
         return None

@@ -8,7 +8,7 @@ import config
 from vk_api import VkApi
 from vk_api.bot_longpoll import VkBotEventType, VkBotLongPoll
 
-from bot.db import add_payment, get_subscription_info, is_subscribed, upsert_subscription
+from bot.db import add_payment, add_pending_payment, get_subscription_info, is_subscribed, upsert_subscription
 from bot.payment import create_payment
 from bot.vk_utils import invite_to_group
 
@@ -212,8 +212,10 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
                 _send(vk, peer_id, f"Ошибка теста: {e}")
             return
 
-        url = create_payment(user_id, tier["price"], tier["days"], tier["label"])
-        if url:
+        result = create_payment(user_id, tier["price"], tier["days"], tier["label"])
+        if result:
+            payment_id, url = result
+            add_pending_payment(payment_id, user_id, tier["price"], tier["days"], tier.get("label", ""))
             _send(
                 vk,
                 peer_id,
