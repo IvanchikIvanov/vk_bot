@@ -13,7 +13,7 @@ from bot.db import (
     remove_pending_payment,
     upsert_subscription,
 )
-from bot.vk_utils import invite_to_group, send_vk_message
+from bot.vk_utils import invite_user_to_chat, send_vk_message
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +51,9 @@ def _process_succeeded(pending: dict) -> None:
         return
 
     logger.info("Poll: processing succeeded user_id=%s payment_id=%s amount=%s days=%s", user_id, payment_id, amount, days)
-    ok = invite_to_group(user_id)
+    ok = invite_user_to_chat(user_id)
     if not ok:
-        logger.warning("Poll: invite failed for user_id=%s payment_id=%s", user_id, payment_id)
+        logger.warning("Poll: addChatUser failed for user_id=%s payment_id=%s", user_id, payment_id)
     add_payment(payment_id, user_id, amount)
     end_date = datetime.utcnow() + timedelta(days=days)
     upsert_subscription(user_id, end_date, tier_label or None)

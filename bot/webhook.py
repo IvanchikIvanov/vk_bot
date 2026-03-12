@@ -12,7 +12,7 @@ from vk_api import VkApi
 
 from bot.admin import admin_bp
 from bot.db import add_payment, payment_exists, upsert_subscription
-from bot.vk_utils import invite_to_group, remove_from_group, send_vk_message
+from bot.vk_utils import invite_user_to_chat, remove_from_chat, send_vk_message
 
 logger = logging.getLogger(__name__)
 app = Flask(__name__)
@@ -35,12 +35,12 @@ def _verify_webhook_signature() -> bool:
     return hmac.compare_digest(expected, sig_header.strip())
 
 
-def _invite_to_group(user_id: int) -> bool:
-    return invite_to_group(user_id)
+def _invite_user_to_chat(user_id: int) -> bool:
+    return invite_user_to_chat(user_id)
 
 
-def _remove_from_group(user_id: int) -> bool:
-    return remove_from_group(user_id)
+def _remove_from_chat(user_id: int) -> bool:
+    return remove_from_chat(user_id)
 
 
 def _send_vk_message(user_id: int, text: str) -> bool:
@@ -75,7 +75,7 @@ def test_payment():
     payment_id = f"test_{user_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
     if payment_exists(payment_id):
         return "", 200
-    _invite_to_group(user_id)
+    _invite_user_to_chat(user_id)
     add_payment(payment_id, user_id, "0")
     end_date = datetime.utcnow() + timedelta(days=days)
     upsert_subscription(user_id, end_date, tier.get("label"))
@@ -97,4 +97,4 @@ def admin_app(path):
 @app.route("/return", methods=["GET"])
 def return_url():
     """Страница после успешной оплаты (redirect от ЮKassa)"""
-    return "<p>Оплата прошла. Проверьте сообщения бота — приглашение в группу должно прийти.</p>", 200
+    return "<p>Оплата прошла. Проверьте сообщения бота — вас добавят в закрытый чат.</p>", 200

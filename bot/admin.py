@@ -15,7 +15,7 @@ from bot.db import (
     remove_subscription,
     upsert_subscription,
 )
-from bot.vk_utils import invite_to_group, remove_from_group, send_vk_message
+from bot.vk_utils import invite_user_to_chat, remove_from_chat, send_vk_message
 
 logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -141,9 +141,9 @@ def manual_invite():
         return {"error": "user_id must be int"}, 400
     days = int(data.get("days", MANUAL_DAYS))
     tier_label = data.get("tier_label", "Ручная выдача")
-    ok = invite_to_group(user_id)
+    ok = invite_user_to_chat(user_id)
     if not ok:
-        return {"error": "groups.invite failed"}, 500
+        return {"error": "messages.addChatUser failed"}, 500
     end_date = datetime.utcnow() + timedelta(days=days)
     upsert_subscription(user_id, end_date, tier_label)
     send_vk_message(user_id, f"✅ Вам выдан доступ на {days} дн. до {end_date.strftime('%d.%m.%Y')}.")
@@ -160,7 +160,7 @@ def manual_block():
         user_id = int(user_id)
     except (ValueError, TypeError):
         return {"error": "user_id must be int"}, 400
-    remove_from_group(user_id)
+    remove_from_chat(user_id)
     remove_subscription(user_id)
     send_vk_message(user_id, config.EXPIRED_MESSAGE)
     return {"ok": True, "user_id": user_id}, 200
@@ -207,9 +207,9 @@ def api_manual_invite():
         return _api_response({"error": "user_id must be int"}, 400)
     days = int(data.get("days", MANUAL_DAYS))
     tier_label = data.get("tier_label", "Ручная выдача")
-    ok = invite_to_group(user_id)
+    ok = invite_user_to_chat(user_id)
     if not ok:
-        return _api_response({"error": "groups.invite failed"}, 500)
+        return _api_response({"error": "messages.addChatUser failed"}, 500)
     end_date = datetime.utcnow() + timedelta(days=days)
     upsert_subscription(user_id, end_date, tier_label)
     send_vk_message(user_id, f"✅ Вам выдан доступ на {days} дн. до {end_date.strftime('%d.%m.%Y')}.")
@@ -228,7 +228,7 @@ def api_manual_block():
         user_id = int(user_id)
     except (ValueError, TypeError):
         return _api_response({"error": "user_id must be int"}, 400)
-    remove_from_group(user_id)
+    remove_from_chat(user_id)
     remove_subscription(user_id)
     send_vk_message(user_id, config.EXPIRED_MESSAGE)
     return _api_response({"ok": True, "user_id": user_id})

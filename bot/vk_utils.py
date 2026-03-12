@@ -12,31 +12,43 @@ def _get_vk() -> VkApi:
 
 
 def _get_vk_user() -> VkApi:
-    """Токен пользователя — для groups.invite, groups.removeUser (group token не поддерживает)"""
-    return VkApi(token=config.VK_USER_TOKEN or config.VK_TOKEN)
+    """Токен пользователя — для messages.addChatUser, messages.removeChatUser (group token не поддерживает)"""
+    token = config.VK_USER_TOKEN
+    if not token:
+        logger.error("VK_USER_TOKEN is empty! messages.addChatUser/removeChatUser require a user token.")
+        raise RuntimeError("VK_USER_TOKEN not configured — cannot call messages.addChatUser")
+    return VkApi(token=token)
 
 
-def invite_to_group(user_id: int) -> bool:
-    """Пригласить пользователя в группу (требует user token)."""
+def invite_user_to_chat(user_id: int) -> bool:
+    """Добавить пользователя в беседу (messages.addChatUser, требует user token)."""
+    chat_id = config.VK_GROUP_CHAT_ID
+    if not chat_id:
+        logger.error("VK_GROUP_CHAT_ID is empty! Cannot add user to chat.")
+        return False
     try:
         vk = _get_vk_user()
-        vk.method("groups.invite", {"group_id": config.VK_GROUP_ID, "user_id": user_id})
-        logger.info("groups.invite ok: user_id=%s group_id=%s", user_id, config.VK_GROUP_ID)
+        vk.method("messages.addChatUser", {"chat_id": chat_id, "user_id": user_id})
+        logger.info("messages.addChatUser ok: user_id=%s chat_id=%s", user_id, chat_id)
         return True
     except Exception as e:
-        logger.exception("groups.invite failed: user_id=%s group_id=%s error=%s", user_id, config.VK_GROUP_ID, e)
+        logger.exception("messages.addChatUser failed: user_id=%s chat_id=%s error=%s", user_id, chat_id, e)
         return False
 
 
-def remove_from_group(user_id: int) -> bool:
-    """Удалить пользователя из группы (требует user token)."""
+def remove_from_chat(user_id: int) -> bool:
+    """Удалить пользователя из беседы (messages.removeChatUser, требует user token)."""
+    chat_id = config.VK_GROUP_CHAT_ID
+    if not chat_id:
+        logger.error("VK_GROUP_CHAT_ID is empty! Cannot remove user from chat.")
+        return False
     try:
         vk = _get_vk_user()
-        vk.method("groups.removeUser", {"group_id": config.VK_GROUP_ID, "user_id": user_id})
-        logger.info("groups.removeUser ok: user_id=%s group_id=%s", user_id, config.VK_GROUP_ID)
+        vk.method("messages.removeChatUser", {"chat_id": chat_id, "user_id": user_id})
+        logger.info("messages.removeChatUser ok: user_id=%s chat_id=%s", user_id, chat_id)
         return True
     except Exception as e:
-        logger.exception("groups.removeUser failed: user_id=%s group_id=%s error=%s", user_id, config.VK_GROUP_ID, e)
+        logger.exception("messages.removeChatUser failed: user_id=%s chat_id=%s error=%s", user_id, chat_id, e)
         return False
 
 

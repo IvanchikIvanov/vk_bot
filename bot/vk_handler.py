@@ -10,14 +10,14 @@ from vk_api.bot_longpoll import VkBotEventType, VkBotLongPoll
 
 from bot.db import add_payment, add_pending_payment, get_subscription_info, is_subscribed, upsert_subscription
 from bot.payment import create_payment
-from bot.vk_utils import invite_to_group
+from bot.vk_utils import invite_user_to_chat
 
 logger = logging.getLogger(__name__)
 
 BACK_LABEL = "⬅️ Главное меню"
 SELECT_TIER_LABEL = "Выбрать тариф"
 RENEW_LABEL = "Продлить"
-RESEND_INVITE_LABEL = "📨 Отправить приглашение повторно"
+RESEND_INVITE_LABEL = "📨 Добавить в чат повторно"
 
 
 def _get_user_id(event) -> int | None:
@@ -177,14 +177,14 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
             )
         return
 
-    # Отправить приглашение повторно (только при активной подписке)
+    # Добавить в чат повторно (только при активной подписке)
     if text == RESEND_INVITE_LABEL:
         logger.info("Action: resend_invite user_id=%s", user_id)
         if is_subscribed(user_id):
-            if invite_to_group(user_id):
-                _send(vk, peer_id, "Приглашение отправлено. Проверьте уведомления ВК (🔔).", keyboard=_get_my_access_keyboard(True))
+            if invite_user_to_chat(user_id):
+                _send(vk, peer_id, "Вы добавлены в чат. Проверьте диалоги ВК.", keyboard=_get_my_access_keyboard(True))
             else:
-                _send(vk, peer_id, "Не удалось отправить приглашение. Обратитесь в поддержку.", keyboard=_get_my_access_keyboard(True))
+                _send(vk, peer_id, "Не удалось добавить в чат. Обратитесь в поддержку.", keyboard=_get_my_access_keyboard(True))
         else:
             _send(vk, peer_id, "Доступа нет. Выберите тариф для оформления подписки.", keyboard=_get_tiers_keyboard())
         return
@@ -206,12 +206,12 @@ def _handle_message(vk: VkApi, user_id: int, peer_id: int, text: str) -> None:
 
         if config.TEST_MODE:
             try:
-                from bot.webhook import _invite_to_group
-                _invite_to_group(user_id)
+                from bot.webhook import _invite_user_to_chat
+                _invite_user_to_chat(user_id)
                 pid = f"test_{user_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
                 add_payment(pid, user_id, tier["price"])
                 upsert_subscription(user_id, datetime.utcnow() + timedelta(days=tier["days"]), tier["label"])
-                _send(vk, peer_id, f"Тест: подписка {tier['label']} активирована, приглашение в группу отправлено.", keyboard=_get_main_keyboard())
+                _send(vk, peer_id, f"Тест: подписка {tier['label']} активирована, добавление в чат выполнено.", keyboard=_get_main_keyboard())
                 logger.info("TEST_MODE: activated %s for user_id=%s", tier["label"], user_id)
             except Exception as e:
                 logger.exception("TEST_MODE activation failed: %s", e)

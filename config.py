@@ -7,8 +7,9 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 VK_TOKEN = os.getenv("VK_TOKEN", "")
-VK_USER_TOKEN = os.getenv("VK_USER_TOKEN", "")  # для groups.invite, groups.removeUser
+VK_USER_TOKEN = os.getenv("VK_USER_TOKEN", "")  # для messages.addChatUser, messages.removeChatUser
 VK_GROUP_ID = int(os.getenv("VK_GROUP_ID", "0"))
+VK_GROUP_CHAT_ID = int(os.getenv("VK_GROUP_CHAT_ID", "0"))  # local_id беседы (vk.com/im/convo/2000000006 → 6)
 YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "")
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "")
 SUBSCRIPTION_PRICE = os.getenv("SUBSCRIPTION_PRICE", "299.00")
@@ -77,7 +78,7 @@ FAQ_TEXT = """❓ Частые вопросы
 
 • Как оплатить? — Выберите тариф, нажмите кнопку, перейдите по ссылке и оплатите картой.
 
-• Когда получу доступ? — Сразу после успешной оплаты. Приглашение придёт в уведомлениях ВК (🔔). Примите его — доступ будет активирован.
+• Когда получу доступ? — Сразу после успешной оплаты вас добавят в закрытый чат. Беседа появится в диалогах ВК.
 
 • Можно ли продлить? — Да, нажмите «Мой доступ» → «Продлить» и выберите новый тариф.
 
@@ -86,14 +87,14 @@ FAQ_TEXT = """❓ Частые вопросы
 SUPPORT_LINK = "https://vk.com/guruyogaru"
 GROUP_LINK = os.getenv("GROUP_LINK", "") or (f"https://vk.com/club{VK_GROUP_ID}" if VK_GROUP_ID > 0 else "")
 
-# Сообщение после оплаты (без ссылки — приглашение личное в уведомлениях ВК)
+# Сообщение после оплаты (добавление в беседу)
 INVITE_SUCCESS_MESSAGE = """✅ Оплата получена!
 
-Вам отправлено приглашение в закрытое сообщество. Примите его в уведомлениях ВКонтакте (иконка колокольчика 🔔).
+Вас добавили в закрытый чат. Откройте диалоги ВК — беседа появится в списке.
 
 Доступ до {end_date}.
 
-Если не нашли приглашение — нажмите «Мой доступ» → «Отправить приглашение повторно»."""
+Если не нашли беседу — нажмите «Мой доступ» → «Добавить в чат повторно»."""
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "https://example.com")
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "")

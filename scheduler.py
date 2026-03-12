@@ -6,7 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 from bot.db import get_expired_user_ids, get_users_expiring_in_days, remove_subscription
 from bot.payment_poller import poll_pending_payments
-from bot.vk_utils import remove_from_group, send_vk_message
+from bot.vk_utils import remove_from_chat, send_vk_message
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +25,13 @@ def send_reminders(days: int):
 
 
 def check_expired_subscriptions():
-    """Удаление из группы + ЛС об истечении + очистка БД"""
+    """Удаление из беседы + ЛС об истечении + очистка БД"""
     expired = get_expired_user_ids()
     for user_id in expired:
         send_vk_message(user_id, config.EXPIRED_MESSAGE)
-        remove_from_group(user_id)
+        remove_from_chat(user_id)
         remove_subscription(user_id)
-        logger.info("Removed user_id=%s from group (subscription expired)", user_id)
+        logger.info("Removed user_id=%s from chat (subscription expired)", user_id)
 
 
 def start_scheduler() -> BackgroundScheduler:
